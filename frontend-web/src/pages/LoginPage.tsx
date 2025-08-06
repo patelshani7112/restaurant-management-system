@@ -107,7 +107,7 @@
  * ================================================================= */
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axiosClient from "../services/axiosClient"; // Import the centralized client
+import axiosClient from "../api/axiosClient"; // Import the centralized client
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");

@@ -4,7 +4,7 @@
  * button for a more intuitive user experience.
  * ================================================================= */
 import React, { useState, useEffect } from "react";
-import axiosClient from "../services/axiosClient";
+import axiosClient from "../api/axiosClient";
 
 interface UserProfile {
   id: string;

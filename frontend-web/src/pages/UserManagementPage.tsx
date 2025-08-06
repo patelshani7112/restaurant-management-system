@@ -2,8 +2,8 @@
  * PATH: frontend-web/src/pages/UserManagementPage.tsx
  * ================================================================= */
 import React, { useEffect, useState, useMemo } from "react";
-import axiosClient from "../services/axiosClient";
-import UserFormModal from "../components/UserFormModal";
+import axiosClient from "../api/axiosClient";
+import UserFormModal from "../components/users/UserFormModal";
 
 interface UserProfile {
   id: string;

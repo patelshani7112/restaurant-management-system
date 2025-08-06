@@ -3,7 +3,7 @@
  * ================================================================= */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabaseClient"; // Use the new client
+import { supabase } from "../lib/supabaseClient"; // Use the new client
 
 const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState("");

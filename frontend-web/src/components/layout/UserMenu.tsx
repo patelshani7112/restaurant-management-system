@@ -3,7 +3,7 @@
  * ================================================================= */
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom"; // 1. Import Link
-import axiosClient from "../../services/axiosClient";
+import axiosClient from "../../api/axiosClient";
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);

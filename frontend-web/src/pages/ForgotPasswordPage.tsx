@@ -3,7 +3,7 @@
  * ================================================================= */
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import axiosClient from "../services/axiosClient";
+import axiosClient from "../api/axiosClient";
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState("");

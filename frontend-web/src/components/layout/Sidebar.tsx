@@ -9,7 +9,7 @@ import {
   ScheduleIcon,
   InventoryIcon,
   SettingsIcon,
-} from "../icons";
+} from "../shared/icons";
 
 interface SidebarProps {
   sidebarOpen: boolean;
