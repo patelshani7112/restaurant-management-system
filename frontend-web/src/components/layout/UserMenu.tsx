@@ -2,8 +2,8 @@
  * PATH: frontend-web/src/components/layout/UserMenu.tsx
  * ================================================================= */
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import axiosClient from "../../services/axiosClient"; // Import the centralized client
+import { useNavigate, Link } from "react-router-dom"; // 1. Import Link
+import axiosClient from "../../services/axiosClient";
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,14 +32,10 @@ const UserMenu: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Use axiosClient to call the logout endpoint.
-      // The token is added automatically by the interceptor.
       await axiosClient.post("/auth/logout");
     } catch (error) {
       console.error("Logout failed:", error);
-      // We proceed with cleanup even if the server call fails
     } finally {
-      // Always clear local storage and redirect
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_profile");
       navigate("/login");
@@ -57,12 +53,14 @@ const UserMenu: React.FC = () => {
 
       {isOpen && (
         <div className="absolute right-0 w-48 mt-2 py-2 bg-white rounded-md shadow-xl z-20">
-          <a
-            href="#"
+          {/* 2. Update the link to use the React Router Link component */}
+          <Link
+            to="/app/profile"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            onClick={() => setIsOpen(false)} // Close menu on click
           >
             Your Profile
-          </a>
+          </Link>
           <a
             href="#"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

@@ -14,7 +14,6 @@ interface UserProfile {
   role_id: number;
   department_name: string;
   department_id: number;
-  // Add other detailed fields to match the modal's needs
 }
 
 const UserManagementPage: React.FC = () => {
@@ -71,7 +70,7 @@ const UserManagementPage: React.FC = () => {
     }
     try {
       await axiosClient.delete(`/users/${userId}`);
-      fetchUsers(); // Refresh list after delete
+      fetchUsers();
     } catch (err: any) {
       alert(
         `Failed to delete user: ${err.response?.data?.error || "Server error"}`
@@ -127,6 +126,13 @@ const UserManagementPage: React.FC = () => {
                   const isLastAdmin =
                     user.role_name === "Admin" && adminCount <= 1;
                   const isCurrentUser = user.id === currentUser.id;
+
+                  // THE FIX: Determine if the action buttons should be shown
+                  const canPerformActions =
+                    currentUser.role_name === "Admin" || // Admins can do anything
+                    (currentUser.role_name === "Manager" &&
+                      user.role_name !== "Admin"); // Managers can't act on Admins
+
                   return (
                     <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -139,19 +145,27 @@ const UserManagementPage: React.FC = () => {
                         {user.role_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleEditUser(user)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          disabled={isLastAdmin && isCurrentUser}
-                          className="text-red-600 hover:text-red-900 disabled:text-gray-400 disabled:cursor-not-allowed"
-                        >
-                          Delete
-                        </button>
+                        {canPerformActions ? (
+                          <>
+                            <button
+                              onClick={() => handleEditUser(user)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={isLastAdmin && isCurrentUser}
+                              className="text-red-600 hover:text-red-900 disabled:text-gray-400 disabled:cursor-not-allowed"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-xs">
+                            No actions available
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

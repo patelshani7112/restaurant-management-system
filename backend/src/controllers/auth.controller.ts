@@ -108,3 +108,35 @@ export const logout = async (req: AuthenticatedRequest, res: Response) => {
 export const getMe = async (req: AuthenticatedRequest, res: Response) => {
   res.status(200).json(req.profile);
 };
+
+/**
+ * Sends a password reset email to the user.
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
+
+  // The redirectTo URL must be whitelisted in your Supabase project settings.
+  const redirectTo = "http://localhost:5173/reset-password";
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectTo,
+  });
+
+  if (error) {
+    console.error("Password reset error:", error);
+    // Send a generic success message even if the email doesn't exist
+    // to prevent user enumeration attacks.
+    return res.status(200).json({
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
+  }
+
+  res.status(200).json({
+    message:
+      "If an account with that email exists, a password reset link has been sent.",
+  });
+};

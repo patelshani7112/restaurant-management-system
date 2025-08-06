@@ -7,7 +7,10 @@ import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import AppLayout from "./components/layout/AppLayout";
 import UserManagementPage from "./pages/UserManagementPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute"; // 1. Import the new component
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ProfilePage from "./pages/ProfilePage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"; // Import
+import ResetPasswordPage from "./pages/ResetPasswordPage"; // Import
 
 function App() {
   return (
@@ -16,14 +19,15 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Application Routes - Now Protected */}
+        {/* Application Routes - Protected */}
         <Route element={<ProtectedRoute />}>
-          {" "}
-          {/* 2. Wrap the application layout */}
           <Route path="/app" element={<AppLayout />}>
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<UserManagementPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
         </Route>
       </Routes>

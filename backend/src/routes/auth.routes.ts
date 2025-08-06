@@ -4,7 +4,13 @@
  */
 
 import { Router } from "express";
-import { login, logout, getMe } from "../controllers/auth.controller";
+import {
+  login,
+  logout,
+  getMe,
+  forgotPassword,
+  resetPassword,
+} from "../controllers/auth.controller";
 import { checkAuth } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -17,5 +23,8 @@ router.post("/logout", checkAuth, logout);
 
 // Route to get the current user's profile (requires a valid token)
 router.get("/me", checkAuth, getMe);
+
+// Password Reset Routes
+router.post("/forgot-password", forgotPassword);
 
 export default router;

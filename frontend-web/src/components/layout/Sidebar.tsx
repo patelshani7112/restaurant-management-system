@@ -1,7 +1,7 @@
 /* =================================================================
  * PATH: frontend-web/src/components/layout/Sidebar.tsx
  * ================================================================= */
-import React from "react";
+import React, { useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import {
   DashboardIcon,
@@ -17,13 +17,51 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const navigationLinks = [
-    { name: "Dashboard", href: "/app/dashboard", icon: DashboardIcon },
-    { name: "Users", href: "/app/users", icon: UsersIcon },
-    { name: "Schedule", href: "/app/schedule", icon: ScheduleIcon },
-    { name: "Inventory", href: "/app/inventory", icon: InventoryIcon },
-    { name: "Settings", href: "/app/settings", icon: SettingsIcon },
+  // Get the user's profile from local storage to determine their role
+  const userProfile = useMemo(
+    () => JSON.parse(localStorage.getItem("user_profile") || "{}"),
+    []
+  );
+  const userRole = userProfile.role_name;
+
+  // Define all possible navigation links with the roles that can see them
+  const allLinks = [
+    {
+      name: "Dashboard",
+      href: "/app/dashboard",
+      icon: DashboardIcon,
+      roles: ["Admin", "Manager", "Staff", "Chef"],
+    },
+    {
+      name: "Users",
+      href: "/app/users",
+      icon: UsersIcon,
+      roles: ["Admin", "Manager"],
+    },
+    {
+      name: "Schedule",
+      href: "/app/schedule",
+      icon: ScheduleIcon,
+      roles: ["Admin", "Manager"],
+    },
+    {
+      name: "Inventory",
+      href: "/app/inventory",
+      icon: InventoryIcon,
+      roles: ["Admin", "Manager", "Chef"],
+    },
+    {
+      name: "Settings",
+      href: "/app/settings",
+      icon: SettingsIcon,
+      roles: ["Admin", "Manager", "Staff", "Chef"],
+    },
   ];
+
+  // Filter the links based on the current user's role
+  const filteredLinks = allLinks.filter((link) =>
+    link.roles.includes(userRole)
+  );
 
   return (
     <>
@@ -47,7 +85,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
         {/* Navigation Links */}
         <nav className="mt-10">
-          {navigationLinks.map((link) => (
+          {/* Map over the FILTERED list of links */}
+          {filteredLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.href}
