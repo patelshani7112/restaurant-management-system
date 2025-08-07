@@ -4,7 +4,8 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
-import { useAuth } from "../contexts/AuthContext"; // 1. Import the useAuth hook
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient"; // 1. Import the supabase client
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -12,7 +13,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth(); // 2. Get the login function from the context
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +27,11 @@ const LoginPage: React.FC = () => {
       });
 
       const { session, profile } = response.data;
-      // 3. Update the global state instead of just localStorage
+
+      // THE FIX: Explicitly set the session in the Supabase client
+      await supabase.auth.setSession(session);
+
+      // Now update our application's global state
       login(profile, session.access_token);
 
       navigate("/app/dashboard");
@@ -38,7 +43,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // ... (The rest of the JSX remains the same)
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg">

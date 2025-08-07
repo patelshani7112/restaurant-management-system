@@ -1,7 +1,7 @@
 /* =================================================================
  * PATH: frontend-web/src/App.tsx
  * ================================================================= */
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
@@ -11,7 +11,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import SchedulePage from "./pages/SchedulePage"; // 1. Import the new page
+import SchedulePage from "./pages/SchedulePage";
+import TimeOffPage from "./pages/TimeOffPage"; // 1. Import the new page
 
 function App() {
   return (
@@ -29,8 +30,14 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<UserManagementPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="schedule" element={<SchedulePage />} />{" "}
-            {/* 2. Add the new route */}
+
+            {/* 2. Update Schedule Routes */}
+            <Route
+              path="schedule"
+              element={<Navigate to="/app/schedule/calendar" replace />}
+            />
+            <Route path="schedule/calendar" element={<SchedulePage />} />
+            <Route path="schedule/time-off" element={<TimeOffPage />} />
           </Route>
         </Route>
       </Routes>

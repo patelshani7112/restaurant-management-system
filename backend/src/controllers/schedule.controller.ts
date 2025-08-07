@@ -18,7 +18,7 @@ interface AuthenticatedRequest extends Request {
   profile?: any;
 }
 
-// ... (getOrCreateSchedule, getShiftsByDateRange, createShift, updateShift, deleteShift, publishSchedule functions remain the same)
+// ... (getOrCreateSchedule, getShiftsByDateRange, updateShift, deleteShift, publishSchedule functions remain the same)
 export const getOrCreateSchedule = async (
   req: AuthenticatedRequest,
   res: Response
@@ -130,6 +130,9 @@ export const getShiftsByDateRange = async (
   }
 };
 
+/**
+ * Creates a new shift, now with time-off conflict detection.
+ */
 export const createShift = async (req: Request, res: Response) => {
   const { schedule_id, user_id, start_time, end_time } = req.body;
 
@@ -144,6 +147,25 @@ export const createShift = async (req: Request, res: Response) => {
   }
 
   try {
+    // THE FIX: Check for approved time-off requests before creating a shift.
+    const { data: timeOff, error: timeOffError } = await supabase
+      .from("time_off_requests")
+      .select("id")
+      .eq("user_id", user_id)
+      .eq("status", "approved")
+      .lte("start_date", end_time)
+      .gte("end_date", start_time)
+      .limit(1);
+
+    if (timeOffError) throw timeOffError;
+
+    if (timeOff && timeOff.length > 0) {
+      return res.status(409).json({
+        error:
+          "Cannot create shift. The employee has approved time off during this period.",
+      });
+    }
+
     const { data, error } = await supabase
       .from("shifts")
       .insert({ schedule_id, user_id, start_time, end_time })
@@ -282,8 +304,7 @@ export const publishSchedule = async (req: Request, res: Response) => {
 };
 
 /**
- * Copies shifts from a source date range to a target date range,
- * with conflict detection and resolution strategies.
+ * Copies shifts, now with time-off conflict detection.
  */
 export const copyShifts = async (req: Request, res: Response) => {
   const { source, target, resolutionStrategy } = req.body;
@@ -343,23 +364,36 @@ export const copyShifts = async (req: Request, res: Response) => {
       targetSchedule = newSchedule;
     }
 
-    // THE FIX: Correctly calculate the target range for conflict checking
-    const isWeekCopy =
-      new Date(source.end).getTime() >
-      addDays(new Date(source.start), 1).getTime();
-    const targetRangeStart = startOfDay(newShifts[0].start_time);
-    const targetRangeEnd = isWeekCopy
-      ? endOfWeek(targetRangeStart, { weekStartsOn: 1 })
-      : endOfDay(targetRangeStart);
+    // THE FIX: Automatically filter out shifts that conflict with approved time off.
+    const userIds = [...new Set(newShifts.map((s) => s.user_id))];
+    const { data: approvedTimeOff } = await supabase
+      .from("time_off_requests")
+      .select("user_id, start_date, end_date")
+      .in("user_id", userIds)
+      .eq("status", "approved");
+
+    const nonConflictingNewShifts = newShifts.filter((newShift) => {
+      return !approvedTimeOff?.some(
+        (off) =>
+          off.user_id === newShift.user_id &&
+          new Date(newShift.start_time) < new Date(off.end_date) &&
+          new Date(newShift.end_time) > new Date(off.start_date)
+      );
+    });
+
+    const targetRangeStart = startOfDay(newShifts[0].start_time).toISOString();
+    const targetRangeEnd = endOfDay(
+      newShifts[newShifts.length - 1].start_time
+    ).toISOString();
 
     const { data: conflictingShifts, error: conflictError } = await supabase
       .from("shifts")
       .select("id, user_id, profiles(first_name, last_name)")
-      .gte("start_time", targetRangeStart.toISOString())
-      .lte("start_time", targetRangeEnd.toISOString());
+      .gte("start_time", targetRangeStart)
+      .lte("start_time", targetRangeEnd);
     if (conflictError) throw conflictError;
 
-    const conflicts = newShifts.filter((newShift) =>
+    const conflicts = nonConflictingNewShifts.filter((newShift) =>
       conflictingShifts?.some(
         (existingShift) => existingShift.user_id === newShift.user_id
       )
@@ -385,12 +419,12 @@ export const copyShifts = async (req: Request, res: Response) => {
       }
     }
 
-    let shiftsToInsert = newShifts;
+    let shiftsToInsert = nonConflictingNewShifts;
     if (resolutionStrategy === "skip" && conflictingShifts) {
       const conflictingUserIds = new Set(
         conflictingShifts.map((s) => s.user_id)
       );
-      shiftsToInsert = newShifts.filter(
+      shiftsToInsert = nonConflictingNewShifts.filter(
         (newShift) => !conflictingUserIds.has(newShift.user_id)
       );
     }
