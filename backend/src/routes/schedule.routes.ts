@@ -9,6 +9,7 @@ import {
   deleteShift,
   getShiftsByDateRange,
   publishSchedule,
+  copyShifts, // Import the new function
 } from "../controllers/schedule.controller";
 import { checkAuth, checkRole } from "../middleware/auth.middleware";
 
@@ -38,5 +39,11 @@ router.delete(
   checkRole(["Admin", "Manager"]),
   deleteShift
 );
+router.post(
+  "/copy-shifts",
+  checkAuth,
+  checkRole(["Admin", "Manager"]),
+  copyShifts
+); // New route for copying
 
 export default router;

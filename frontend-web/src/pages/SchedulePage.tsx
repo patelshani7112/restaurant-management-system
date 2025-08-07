@@ -48,6 +48,12 @@
 //   resource?: { color: string };
 // }
 
+// interface Schedule {
+//   id: number;
+//   week_start_date: string;
+//   is_published: boolean;
+// }
+
 // // --- CUSTOM COMPONENTS ---
 // const ShiftEvent: React.FC<{ event: Shift }> = ({ event }) => {
 //   return (
@@ -80,7 +86,7 @@
 //   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
 //   const [selectedUserId, setSelectedUserId] = useState<string>("all");
-//   const [scheduleId, setScheduleId] = useState<number | null>(null);
+//   const [schedule, setSchedule] = useState<Schedule | null>(null);
 //   const [hourBudget, setHourBudget] = useState(160);
 
 //   const currentUser: UserProfile = useMemo(
@@ -128,12 +134,13 @@
 //       const scheduleResponse = await axiosClient.get(
 //         `/schedules/week/${weekStartDate}`
 //       );
-//       setScheduleId(scheduleResponse.data.schedule?.id || null);
+//       setSchedule(scheduleResponse.data.schedule);
 
 //       const shiftsResponse = await axiosClient.get("/schedules/shifts", {
 //         params: {
 //           startDate: dateRange.start.toISOString(),
 //           endDate: dateRange.end.toISOString(),
+//           weekStartDate: weekStartDate,
 //         },
 //       });
 
@@ -222,29 +229,35 @@
 //   const handleView = (view: View | "custom") => setCurrentView(view);
 
 //   const handleSelectSlot = (slotInfo: SlotInfo) => {
-//     if (!isManagerOrAdmin || new Date(slotInfo.start) < new Date()) return;
+//     if (!isManagerOrAdmin) return;
+//     // For published weeks, prevent creating shifts in the past. Drafts can be edited freely.
+//     if (schedule?.is_published && new Date(slotInfo.start) < new Date()) return;
 //     setSelectedSlot(slotInfo);
 //     setIsAddModalOpen(true);
 //   };
 
 //   const handleSelectEvent = (event: Shift) => {
-//     if (!isManagerOrAdmin || new Date(event.start as Date) < new Date()) return;
+//     if (!isManagerOrAdmin) return;
+//     // For published weeks, prevent editing past/ongoing shifts.
+//     if (schedule?.is_published && new Date(event.start as Date) < new Date())
+//       return;
 //     setSelectedShift(event);
 //     setIsEditModalOpen(true);
 //   };
 
 //   const eventStyleGetter = (event: Shift) => {
 //     const isPast = new Date(event.start as Date) < new Date();
-//     const backgroundColor = event.resource?.color || "#E5E7EB";
+//     const isPublished = schedule?.is_published || false;
+//     const isLocked = isPast && isPublished;
 
 //     const style = {
-//       backgroundColor: backgroundColor,
+//       backgroundColor: event.resource?.color || "#E5E7EB",
 //       borderRadius: "5px",
-//       opacity: isPast ? 0.6 : 0.9,
+//       opacity: isLocked ? 0.6 : 0.9,
 //       color: "#1F2937",
 //       border: "1px solid #9CA3AF",
 //       display: "block",
-//       cursor: isPast && isManagerOrAdmin ? "not-allowed" : "pointer",
+//       cursor: isLocked && isManagerOrAdmin ? "not-allowed" : "pointer",
 //     };
 //     return { style };
 //   };
@@ -255,6 +268,32 @@
 //     setCurrentDate(newDate);
 //   };
 
+//   const handlePublishToggle = async () => {
+//     if (!schedule) return;
+//     try {
+//       const newStatus = !schedule.is_published;
+//       const response = await axiosClient.patch(
+//         `/schedules/${schedule.id}/publish`,
+//         {
+//           is_published: newStatus,
+//         }
+//       );
+//       setSchedule(response.data);
+//       fetchData();
+//     } catch (error: any) {
+//       alert(
+//         `Error: ${error.response?.data?.error || "Could not update status."}`
+//       );
+//     }
+//   };
+
+//   const isWeekInPast = useMemo(() => {
+//     if (!schedule) return false;
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+//     return new Date(schedule.week_start_date) < today;
+//   }, [schedule]);
+
 //   return (
 //     <div className="space-y-6">
 //       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -262,20 +301,26 @@
 //           <h1 className="text-3xl font-bold text-gray-800">
 //             Employee Schedule
 //           </h1>
-//           <p className="text-gray-500 mt-1">
-//             {isManagerOrAdmin
-//               ? "Manage shifts, track hours, and publish schedules."
-//               : "View your upcoming shifts."}
+//           <p className="text-sm text-gray-500">
+//             {isManagerOrAdmin ? "Total Hours Scheduled:" : "Your Total Hours:"}
+//             <span className="font-bold text-indigo-600"> {totalHours}</span>
 //           </p>
 //         </div>
 //         {isManagerOrAdmin && (
-//           <button className="px-4 py-2 rounded-md font-semibold text-white bg-green-500 hover:bg-green-600 shadow-sm">
-//             Publish Week
+//           <button
+//             onClick={handlePublishToggle}
+//             disabled={isWeekInPast && schedule?.is_published}
+//             className={`px-4 py-2 rounded-md font-semibold text-white shadow-sm transition-colors ${
+//               schedule?.is_published
+//                 ? "bg-green-500 hover:bg-green-600"
+//                 : "bg-gray-500 hover:bg-gray-600"
+//             } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+//           >
+//             {schedule?.is_published ? "✓ Published" : "Publish Week"}
 //           </button>
 //         )}
 //       </div>
 
-//       {/* THE FIX: The toolbar is now correctly structured for all roles */}
 //       <div className="bg-white p-4 rounded-lg shadow-md space-y-4">
 //         <div
 //           className={`grid grid-cols-1 ${
@@ -404,7 +449,7 @@
 //               date={currentDate}
 //               onNavigate={handleNavigate}
 //               onView={(v) => handleView(v)}
-//               onDrillDown={handleDrillDown}
+//               onDrillDown={handleNavigate}
 //               selectable={isManagerOrAdmin}
 //               onSelectSlot={handleSelectSlot}
 //               onSelectEvent={handleSelectEvent}
@@ -419,17 +464,17 @@
 //         </div>
 //       </div>
 
-//       {isAddModalOpen && selectedSlot && scheduleId && (
+//       {isManagerOrAdmin && isAddModalOpen && selectedSlot && schedule?.id && (
 //         <AddShiftModal
 //           isOpen={isAddModalOpen}
 //           onClose={() => setIsAddModalOpen(false)}
 //           onSave={fetchData}
 //           users={users}
-//           scheduleId={scheduleId}
+//           scheduleId={schedule.id}
 //           slotInfo={selectedSlot}
 //         />
 //       )}
-//       {isEditModalOpen && selectedShift && (
+//       {isManagerOrAdmin && isEditModalOpen && selectedShift && (
 //         <EditShiftModal
 //           isOpen={isEditModalOpen}
 //           onClose={() => setIsEditModalOpen(false)}
@@ -469,6 +514,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import axiosClient from "../api/axiosClient";
 import AddShiftModal from "../components/schedule/AddShiftModal";
 import EditShiftModal from "../components/schedule/EditShiftModal";
+import CopyScheduleModal from "../components/schedule/CopyScheduleModal";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({
@@ -500,7 +546,6 @@ interface Schedule {
   is_published: boolean;
 }
 
-// --- CUSTOM COMPONENTS ---
 const ShiftEvent: React.FC<{ event: Shift }> = ({ event }) => {
   return (
     <div className="h-full p-1 flex flex-col justify-start">
@@ -513,7 +558,6 @@ const ShiftEvent: React.FC<{ event: Shift }> = ({ event }) => {
   );
 };
 
-// --- MAIN SCHEDULE PAGE COMPONENT ---
 const SchedulePage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View | "custom">(Views.WEEK);
@@ -528,6 +572,7 @@ const SchedulePage: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
@@ -675,18 +720,13 @@ const SchedulePage: React.FC = () => {
   const handleView = (view: View | "custom") => setCurrentView(view);
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
-    if (!isManagerOrAdmin) return;
-    // For published weeks, prevent creating shifts in the past. Drafts can be edited freely.
-    if (schedule?.is_published && new Date(slotInfo.start) < new Date()) return;
+    if (!isManagerOrAdmin || new Date(slotInfo.start) < new Date()) return;
     setSelectedSlot(slotInfo);
     setIsAddModalOpen(true);
   };
 
   const handleSelectEvent = (event: Shift) => {
-    if (!isManagerOrAdmin) return;
-    // For published weeks, prevent editing past/ongoing shifts.
-    if (schedule?.is_published && new Date(event.start as Date) < new Date())
-      return;
+    if (!isManagerOrAdmin || new Date(event.start as Date) < new Date()) return;
     setSelectedShift(event);
     setIsEditModalOpen(true);
   };
@@ -735,9 +775,11 @@ const SchedulePage: React.FC = () => {
 
   const isWeekInPast = useMemo(() => {
     if (!schedule) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return new Date(schedule.week_start_date) < today;
+    const today = startOfDay(new Date());
+    const weekEndDate = endOfWeek(new Date(schedule.week_start_date), {
+      weekStartsOn: 1,
+    });
+    return weekEndDate < today;
   }, [schedule]);
 
   return (
@@ -747,23 +789,33 @@ const SchedulePage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">
             Employee Schedule
           </h1>
-          <p className="text-sm text-gray-500">
-            {isManagerOrAdmin ? "Total Hours Scheduled:" : "Your Total Hours:"}
-            <span className="font-bold text-indigo-600"> {totalHours}</span>
+          <p className="text-gray-500 mt-1">
+            {isManagerOrAdmin
+              ? "Manage shifts, track hours, and publish schedules."
+              : "View your upcoming shifts."}
           </p>
         </div>
         {isManagerOrAdmin && (
-          <button
-            onClick={handlePublishToggle}
-            disabled={isWeekInPast && schedule?.is_published}
-            className={`px-4 py-2 rounded-md font-semibold text-white shadow-sm transition-colors ${
-              schedule?.is_published
-                ? "bg-green-500 hover:bg-green-600"
-                : "bg-gray-500 hover:bg-gray-600"
-            } disabled:bg-gray-300 disabled:cursor-not-allowed`}
-          >
-            {schedule?.is_published ? "✓ Published" : "Publish Week"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsCopyModalOpen(true)}
+              className="px-4 py-2 rounded-md font-semibold text-indigo-600 bg-indigo-100 hover:bg-indigo-200 shadow-sm"
+            >
+              Copy Schedule
+            </button>
+            {!isWeekInPast && (
+              <button
+                onClick={handlePublishToggle}
+                className={`px-4 py-2 rounded-md font-semibold text-white shadow-sm transition-colors ${
+                  schedule?.is_published
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-gray-500 hover:bg-gray-600"
+                }`}
+              >
+                {schedule?.is_published ? "✓ Published" : "Publish Week"}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -895,7 +947,7 @@ const SchedulePage: React.FC = () => {
               date={currentDate}
               onNavigate={handleNavigate}
               onView={(v) => handleView(v)}
-              onDrillDown={handleNavigate}
+              onDrillDown={handleDrillDown}
               selectable={isManagerOrAdmin}
               onSelectSlot={handleSelectSlot}
               onSelectEvent={handleSelectEvent}
@@ -910,6 +962,7 @@ const SchedulePage: React.FC = () => {
         </div>
       </div>
 
+      {/* THE FIX: Use schedule?.id to prevent error when schedule is null */}
       {isManagerOrAdmin && isAddModalOpen && selectedSlot && schedule?.id && (
         <AddShiftModal
           isOpen={isAddModalOpen}
@@ -927,6 +980,14 @@ const SchedulePage: React.FC = () => {
           onSave={fetchData}
           users={users}
           shift={selectedShift}
+        />
+      )}
+      {isManagerOrAdmin && isCopyModalOpen && (
+        <CopyScheduleModal
+          isOpen={isCopyModalOpen}
+          onClose={() => setIsCopyModalOpen(false)}
+          onSave={fetchData}
+          sourceDate={currentDate}
         />
       )}
     </div>

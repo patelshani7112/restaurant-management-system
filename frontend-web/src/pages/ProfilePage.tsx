@@ -5,6 +5,7 @@
  * ================================================================= */
 import React, { useState, useEffect } from "react";
 import axiosClient from "../api/axiosClient";
+import { useAuth } from "../contexts/AuthContext";
 
 interface UserProfile {
   id: string;
@@ -29,7 +30,8 @@ interface UserProfile {
 }
 
 const ProfilePage: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { user, updateProfile } = useAuth();
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -43,33 +45,30 @@ const ProfilePage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load initial profile data from local storage
-    const storedProfile = localStorage.getItem("user_profile");
-    if (storedProfile) {
-      const parsedProfile: UserProfile = JSON.parse(storedProfile);
-      setProfile(parsedProfile);
-      // Initialize form data with the user's current details
+    // Load initial profile data from the auth context
+    if (user) {
+      const fullProfile = user as UserProfile; // Cast to get all fields
       setFormData({
-        firstName: parsedProfile.first_name || "",
-        lastName: parsedProfile.last_name || "",
-        phoneNumber: parsedProfile.phone_number || "",
-        dateOfBirth: parsedProfile.date_of_birth
-          ? parsedProfile.date_of_birth.split("T")[0]
+        firstName: fullProfile.first_name || "",
+        lastName: fullProfile.last_name || "",
+        phoneNumber: fullProfile.phone_number || "",
+        dateOfBirth: fullProfile.date_of_birth
+          ? fullProfile.date_of_birth.split("T")[0]
           : "",
-        address: parsedProfile.address || {
+        address: fullProfile.address || {
           street: "",
           city: "",
           province: "",
           postal_code: "",
         },
-        emergencyContact: parsedProfile.emergency_contact || {
+        emergencyContact: fullProfile.emergency_contact || {
           name: "",
           relationship: "",
           phone: "",
         },
       });
     }
-  }, []);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,7 +88,7 @@ const ProfilePage: React.FC = () => {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (!user) return;
 
     setLoading(true);
     setError(null);
@@ -97,12 +96,10 @@ const ProfilePage: React.FC = () => {
 
     try {
       // Make the API call to update the profile
-      const response = await axiosClient.put(`/users/${profile.id}`, formData);
+      const response = await axiosClient.put(`/users/${user.id}`, formData);
 
-      // On success, update the local state and localStorage
-      const updatedProfile = response.data;
-      setProfile(updatedProfile);
-      localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
+      // On success, update the global state
+      updateProfile(response.data);
       setSuccess("Profile updated successfully!");
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to update profile.");
@@ -112,9 +109,11 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  if (!profile) {
+  if (!user) {
     return <div>Loading profile...</div>;
   }
+
+  const fullProfile = user as UserProfile;
 
   return (
     <div>
@@ -268,34 +267,34 @@ const ProfilePage: React.FC = () => {
                 Email Address
               </dt>
               <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                {profile.email}
+                {fullProfile.email}
               </dd>
             </div>
             <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Role</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                {profile.role_name}
+                {fullProfile.role_name}
               </dd>
             </div>
             <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Department</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                {profile.department_name}
+                {fullProfile.department_name}
               </dd>
             </div>
             <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Hire Date</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                {profile.hire_date
-                  ? new Date(profile.hire_date).toLocaleDateString()
+                {fullProfile.hire_date
+                  ? new Date(fullProfile.hire_date).toLocaleDateString()
                   : "N/A"}
               </dd>
             </div>
             <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Pay Rate</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                {profile.pay_rate
-                  ? `$${profile.pay_rate} / ${profile.pay_type}`
+                {fullProfile.pay_rate
+                  ? `$${fullProfile.pay_rate} / ${fullProfile.pay_type}`
                   : "N/A"}
               </dd>
             </div>

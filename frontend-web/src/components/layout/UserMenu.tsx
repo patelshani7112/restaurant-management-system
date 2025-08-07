@@ -2,21 +2,22 @@
  * PATH: frontend-web/src/components/layout/UserMenu.tsx
  * ================================================================= */
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom"; // 1. Import Link
+import { useNavigate, Link } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../contexts/AuthContext"; // 1. Import useAuth
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userInitials, setUserInitials] = useState("");
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth(); // 2. Get user and logout from context
 
   useEffect(() => {
-    const profileString = localStorage.getItem("user_profile");
-    if (profileString) {
-      const profile = JSON.parse(profileString);
-      const initials = `${profile.first_name?.charAt(0) || ""}${
-        profile.last_name?.charAt(0) || ""
+    // 3. Get user details from the context
+    if (user) {
+      const initials = `${user.first_name?.charAt(0) || ""}${
+        user.last_name?.charAt(0) || ""
       }`.toUpperCase();
       setUserInitials(initials);
     }
@@ -28,7 +29,7 @@ const UserMenu: React.FC = () => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [user]); // Re-run if the user object changes
 
   const handleLogout = async () => {
     try {
@@ -36,12 +37,13 @@ const UserMenu: React.FC = () => {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_profile");
+      // 4. Use the logout function from the context
+      logout();
       navigate("/login");
     }
   };
 
+  // ... (The rest of the JSX remains the same)
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -53,11 +55,10 @@ const UserMenu: React.FC = () => {
 
       {isOpen && (
         <div className="absolute right-0 w-48 mt-2 py-2 bg-white rounded-md shadow-xl z-20">
-          {/* 2. Update the link to use the React Router Link component */}
           <Link
             to="/app/profile"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            onClick={() => setIsOpen(false)} // Close menu on click
+            onClick={() => setIsOpen(false)}
           >
             Your Profile
           </Link>
