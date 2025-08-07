@@ -1,16 +1,17 @@
 /* =================================================================
  * PATH: frontend-web/src/App.tsx
  * ================================================================= */
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import DashboardPage from "./pages/DashboardPage";
-import HomePage from "./pages/HomePage";
-import AppLayout from "./components/layout/AppLayout";
-import UserManagementPage from "./pages/UserManagementPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import ProfilePage from "./pages/ProfilePage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage"; // Import
-import ResetPasswordPage from "./pages/ResetPasswordPage"; // Import
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import HomePage from './pages/HomePage';
+import AppLayout from './components/layout/AppLayout';
+import UserManagementPage from './pages/UserManagementPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProfilePage from './pages/ProfilePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import SchedulePage from './pages/SchedulePage'; // 1. Import the new page
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<UserManagementPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="schedule" element={<SchedulePage />} /> {/* 2. Add the new route */}
           </Route>
         </Route>
       </Routes>

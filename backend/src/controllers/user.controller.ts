@@ -1,9 +1,8 @@
-/*
+/* =================================================================
  * PATH: backend/src/controllers/user.controller.ts
- * This controller handles all logic related to user management (CRUD).
- * UPDATED: Fixed a bug where admins could not update their own profile.
- */
-
+ * This is the final, complete controller for user management,
+ * including all security checks and features.
+ * ================================================================= */
 import { Request, Response } from "express";
 import { supabase } from "../config/supabaseClient";
 
@@ -12,7 +11,35 @@ interface AuthenticatedRequest extends Request {
   profile?: any;
 }
 
-// ... (The createUser, getAllUsers, and getUserById functions remain the same)
+// A predefined list of pleasant, distinct colors for the schedule
+const scheduleColors = [
+  "#A7F3D0",
+  "#BAE6FD",
+  "#FBCFE8",
+  "#FDE68A",
+  "#C7D2FE",
+  "#A5B4FC",
+  "#FCA5A5",
+  "#93C5FD",
+  "#FDBA74",
+  "#818CF8",
+  "#D1FAE5",
+  "#E0E7FF",
+  "#FEF3C7",
+  "#FCE7F3",
+  "#E0F2FE",
+  "#F3E8FF",
+  "#FFE4E6",
+  "#D4E6F1",
+  "#FDEDEC",
+  "#E8F8F5",
+  "#FDF2E9",
+  "#F5EEF8",
+  "#D6EAF8",
+  "#FDFAF4",
+  "#E5E7EB",
+];
+
 export const createUser = async (req: Request, res: Response) => {
   const {
     email,
@@ -53,16 +80,21 @@ export const createUser = async (req: Request, res: Response) => {
         email_confirm: true,
       });
 
-    if (authError) {
-      return res.status(409).json({ error: authError.message });
-    }
-    if (!authData.user) {
+    if (authError) return res.status(409).json({ error: authError.message });
+    if (!authData.user)
       return res
         .status(500)
         .json({ error: "User could not be created in Auth." });
-    }
 
     const newUserId = authData.user.id;
+
+    // Auto-assign a schedule color
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true });
+    const colorIndex = (count || 0) % scheduleColors.length;
+    const assignedColor = scheduleColors[colorIndex];
+
     const profileToInsert = {
       id: newUserId,
       email: email,
@@ -70,6 +102,7 @@ export const createUser = async (req: Request, res: Response) => {
       last_name: lastName,
       role_id: roleId,
       department_id: departmentId,
+      schedule_color: assignedColor,
       avatar_url: avatarUrl,
       date_of_birth: dateOfBirth,
       phone_number: phoneNumber,
@@ -98,10 +131,7 @@ export const createUser = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: "User created successfully.",
-      user: {
-        id: newUserId,
-        email: authData.user.email,
-      },
+      user: { id: newUserId, email: authData.user.email },
     });
   } catch (error) {
     console.error(error);
@@ -112,9 +142,15 @@ export const createUser = async (req: Request, res: Response) => {
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const { data, error } = await supabase.from("profiles").select("*");
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error fetching users:", error);
+      return res
+        .status(403)
+        .json({ error: "Database permission denied.", details: error.message });
+    }
     res.status(200).json(data);
   } catch (error: any) {
+    console.error("Catch block error fetching users:", error);
     res
       .status(500)
       .json({ error: "An unexpected error occurred.", details: error.message });
@@ -140,23 +176,16 @@ export const getUserById = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Updates a user's profile with corrected security checks.
- */
 export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params; // The ID of the user to update
-  const requestor = req.user; // The user MAKING the request
+  const { id } = req.params;
+  const requestor = req.user;
   const requestorProfile = req.profile;
+  const updates = { ...req.body };
 
-  const updates = { ...req.body }; // Get a mutable copy of the request body
-
-  // THE FIX: If an admin is editing their own profile, we explicitly remove
-  // the 'roleId' from the update payload to prevent the error.
   if (requestorProfile.role_name === "Admin" && requestor.id === id) {
     delete updates.roleId;
   }
 
-  // Map frontend camelCase names to backend snake_case names
   const dbPayload: { [key: string]: any } = {};
   if (updates.firstName) dbPayload.first_name = updates.firstName;
   if (updates.lastName) dbPayload.last_name = updates.lastName;
@@ -205,12 +234,8 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-/**
- * Deletes a user with new security checks.
- */
 export const deleteUser = async (req: Request, res: Response) => {
   const { id } = req.params;
-
   try {
     const { data: userToDelete, error: fetchError } = await supabase
       .from("profiles")
@@ -246,7 +271,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(204).send(); // Success
+    res.status(204).send();
   } catch (error: any) {
     res
       .status(500)

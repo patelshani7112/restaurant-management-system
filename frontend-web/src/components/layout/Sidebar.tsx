@@ -17,7 +17,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  // Get the user's profile from local storage to determine their role
   const userProfile = useMemo(
     () => JSON.parse(localStorage.getItem("user_profile") || "{}"),
     []
@@ -38,11 +37,12 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       icon: UsersIcon,
       roles: ["Admin", "Manager"],
     },
+    // THE FIX: Added 'Staff' and 'Chef' to the roles array for the Schedule link
     {
       name: "Schedule",
       href: "/app/schedule",
       icon: ScheduleIcon,
-      roles: ["Admin", "Manager"],
+      roles: ["Admin", "Manager", "Staff", "Chef"],
     },
     {
       name: "Inventory",
@@ -85,7 +85,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
         {/* Navigation Links */}
         <nav className="mt-10">
-          {/* Map over the FILTERED list of links */}
           {filteredLinks.map((link) => (
             <NavLink
               key={link.name}
